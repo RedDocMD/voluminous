@@ -22,6 +22,7 @@ struct devices {
 int main() {
     pulse_api api{};
     bool subscribe_set{false};
+    bool devices_init{false};
     devices all_devices{};
 
     for (;;) {
@@ -31,6 +32,13 @@ int main() {
         }
         if (api.status == pulse_api_status::failed)
             break;
+        if (!devices_init) {
+            pa_context_get_source_info_list(api.ctx, source_info_list_cb,
+                                            &all_devices.sources);
+            pa_context_get_sink_info_list(api.ctx, sink_info_list_cb,
+                                          &all_devices.sinks);
+            devices_init = true;
+        }
         if (!subscribe_set) {
             pa_context_set_subscribe_callback(api.ctx, subscribe_cb,
                                               &all_devices);
@@ -64,6 +72,8 @@ void subscribe_cb(pa_context *ctx, pa_subscription_event_type_t type,
             std::cout << "Sink removed\n";
         else if (is_event_change(type))
             std::cout << "Sink changed\n";
+        pa_context_get_sink_info_list(ctx, sink_info_list_cb,
+                                      &all_devices->sinks);
     }
 }
 
@@ -81,11 +91,22 @@ void source_info_list_cb(pa_context *ctx, const pa_source_info *info, int eol,
             std::cout << device;
         return;
     }
-    device_info new_source{
-        info->name,
-        info->description,
-        info->index,
-        info->volume,
-    };
-    sources->devices.push_back(new_source);
+    sources->devices.emplace_back(info);
+}
+
+void sink_info_list_cb(pa_context *ctx, const pa_sink_info *info, int eol,
+                       void *data) {
+    auto *sinks = static_cast<device_list *>(data);
+    if (!sinks->updating) {
+        sinks->devices.clear();
+        sinks->updating = true;
+    }
+    if (eol) {
+        sinks->updating = false;
+        std::cout << "Sinks\n";
+        for (const auto &device : sinks->devices)
+            std::cout << device;
+        return;
+    }
+    sinks->devices.emplace_back(info);
 }
