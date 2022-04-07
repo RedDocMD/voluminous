@@ -1,3 +1,4 @@
+#include "channel.h"
 #include "device.h"
 #include "pulse_api.h"
 #include <cassert>
@@ -63,21 +64,21 @@ void subscribe_cb(pa_context *ctx, pa_subscription_event_type_t type,
                   uint32_t idx, void *data) {
     auto *all_devices = static_cast<devices *>(data);
     if (is_event_source(type, PA_SUBSCRIPTION_EVENT_SOURCE)) {
-        if (is_event_new(type))
-            std::cout << "Source created\n";
-        else if (is_event_remove(type))
-            std::cout << "Source removed\n";
-        else if (is_event_change(type))
-            std::cout << "Source changed\n";
+        // if (is_event_new(type))
+        //     std::cout << "Source created\n";
+        // else if (is_event_remove(type))
+        //     std::cout << "Source removed\n";
+        // else if (is_event_change(type))
+        //     std::cout << "Source changed\n";
         pa_context_get_source_info_list(ctx, source_info_list_cb,
                                         &all_devices->sources);
     } else if (is_event_source(type, PA_SUBSCRIPTION_EVENT_SINK)) {
-        if (is_event_new(type))
-            std::cout << "Sink created\n";
-        else if (is_event_remove(type))
-            std::cout << "Sink removed\n";
-        else if (is_event_change(type))
-            std::cout << "Sink changed\n";
+        // if (is_event_new(type))
+        //     std::cout << "Sink created\n";
+        // else if (is_event_remove(type))
+        //     std::cout << "Sink removed\n";
+        // else if (is_event_change(type))
+        //     std::cout << "Sink changed\n";
         pa_context_get_sink_info_list(ctx, sink_info_list_cb,
                                       &all_devices->sinks);
     }
@@ -92,9 +93,6 @@ void source_info_list_cb(pa_context *ctx, const pa_source_info *info, int eol,
     }
     if (eol) {
         sources->updating = false;
-        std::cout << "Sources:\n";
-        for (const auto &device : sources->devices)
-            std::cout << device;
         return;
     }
     sources->devices.emplace_back(info);
@@ -109,9 +107,6 @@ void sink_info_list_cb(pa_context *ctx, const pa_sink_info *info, int eol,
     }
     if (eol) {
         sinks->updating = false;
-        std::cout << "Sinks\n";
-        for (const auto &device : sinks->devices)
-            std::cout << device;
         return;
     }
     sinks->devices.emplace_back(info);
