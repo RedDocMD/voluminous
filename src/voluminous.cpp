@@ -1,6 +1,8 @@
 #include "channel.h"
+#include "command.h"
 #include "device.h"
 #include "pulse_api.h"
+
 #include <cassert>
 #include <iostream>
 #include <memory>
@@ -23,7 +25,8 @@ struct devices {
     device_list sinks{};
 };
 
-static void pulseaudio_mainloop(std::shared_ptr<devices> all_devices) {
+static void pulseaudio_mainloop(std::shared_ptr<devices> all_devices,
+                                std::shared_ptr<mpsc<command>> channel) {
     pulse_api api{};
     bool subscribe_set{false};
     bool devices_init{false};
@@ -55,7 +58,21 @@ static void pulseaudio_mainloop(std::shared_ptr<devices> all_devices) {
 
 int main() {
     auto all_devices = std::make_shared<devices>();
-    std::thread pa_thread(pulseaudio_mainloop, all_devices);
+    auto channel = mpsc<command>::unbounded();
+    std::thread pa_thread(pulseaudio_mainloop, all_devices, channel);
+    for (;;) {
+        std::cout << "Enter command\n";
+        std::string comm;
+        std::cin >> comm;
+        if (comm == "sources") {
+            channel->send(command(command_type::list_sources,
+                                  std::make_unique<command_data>()));
+        } else if (comm == "sinks") {
+            channel->send(command(command_type::list_sinks,
+                                  std::make_unique<command_data>()));
+        }
+        sleep(1);
+    }
     pa_thread.join();
     return 0;
 }
