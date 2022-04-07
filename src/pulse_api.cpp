@@ -31,3 +31,6 @@ void pulse_api::default_iterate() {
     pa_mainloop_iterate(mainloop, true, nullptr);
 }
 
+void pulse_api::nonblocking_iterate() {
+    pa_mainloop_iterate(mainloop, false, nullptr);
+}

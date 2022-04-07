@@ -17,6 +17,7 @@ struct pulse_api {
     pulse_api();
     ~pulse_api();
     void default_iterate();
+    void nonblocking_iterate();
 };
 
 inline bool is_event_source(pa_subscription_event_type_t type,

@@ -18,6 +18,14 @@ static void sink_info_list_cb(pa_context *ctx, const pa_sink_info *info,
 struct device_list {
     std::vector<device_info> devices{};
     bool updating{false};
+
+    using iterator = std::vector<device_info>::iterator;
+    using const_iterator = std::vector<device_info>::const_iterator;
+
+    iterator begin() { return devices.begin(); }
+    const_iterator begin() const { return devices.begin(); }
+    iterator end() { return devices.end(); }
+    const_iterator end() const { return devices.end(); }
 };
 
 struct devices {
@@ -30,6 +38,7 @@ static void pulseaudio_mainloop(std::shared_ptr<devices> all_devices,
     pulse_api api{};
     bool subscribe_set{false};
     bool devices_init{false};
+    std::chrono::microseconds timeout{500000};
     for (;;) {
         if (api.status == pulse_api_status::not_ready) {
             api.default_iterate();
@@ -51,8 +60,25 @@ static void pulseaudio_mainloop(std::shared_ptr<devices> all_devices,
                 PA_SUBSCRIPTION_MASK_SOURCE | PA_SUBSCRIPTION_MASK_SINK);
             pa_context_subscribe(api.ctx, event_mask, nullptr, nullptr);
             subscribe_set = true;
+            api.default_iterate();
+            continue;
         }
-        api.default_iterate();
+        auto cmd = channel->recv_or_timeout(timeout);
+        if (cmd) {
+            switch (cmd->type()) {
+            case command_type::list_sources:
+                std::cout << "Sources:\n";
+                for (const auto &device : all_devices->sources)
+                    std::cout << device << "\n";
+                break;
+            case command_type::list_sinks:
+                std::cout << "Sinks:\n";
+                for (const auto &device : all_devices->sinks)
+                    std::cout << device << "\n";
+                break;
+            }
+        }
+        api.nonblocking_iterate();
     }
 }
 

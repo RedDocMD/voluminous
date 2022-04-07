@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <memory>
@@ -16,6 +17,7 @@ public:
     void send(const T &val);
     void send(T &&val);
     T recv();
+    std::optional<T> recv_or_timeout(std::chrono::microseconds timeout);
 };
 
 template <typename T> std::shared_ptr<mpsc<T>> mpsc<T>::unbounded() {
@@ -46,6 +48,23 @@ template <typename T> T mpsc<T>::recv() {
     {
         std::lock_guard<T> guard(mtx_);
         val = queue_.pop_front();
+    }
+    return val.value();
+}
+
+template <typename T>
+std::optional<T> mpsc<T>::recv_or_timeout(std::chrono::microseconds timeout) {
+    std::unique_lock lk(mtx_);
+    bool has_value =
+        cnd_.wait_for(lk, timeout, [this] { return !queue_.empty(); });
+    if (!has_value)
+        return {};
+    lk.unlock();
+    std::optional<T> val;
+    {
+        std::lock_guard guard(mtx_);
+        val = std::move(queue_.front());
+        queue_.pop_front();
     }
     return val;
 }
