@@ -12,7 +12,8 @@ incdir = include_directories('include')
 
 sources = [
   'src/device.cpp',
-  'src/pulse_api.cpp'
+  'src/pulse_api.cpp',
+  'src/channel.cpp'
 ]
 
 libpulse = dependency('libpulse')
